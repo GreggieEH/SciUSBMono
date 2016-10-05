@@ -1,0 +1,239 @@
+// SciUsbMono.idl
+// IDL file
+
+#include <olectl.h>
+#include "dispids.h"
+
+[
+	uuid(EC312BF1-084B-4822-B3FE-1444EE1A97F9),
+	helpstring("SciUsbMono type library"),
+	version(1.0)
+]
+library SciUsbMono
+{
+	importlib("stdole32.tlb");
+	import "IMono.idl";
+	[
+		uuid(F003B656-547D-4c79-8E7B-2BEC922BFE88),
+		helpstring("ISciUsbMono interface")
+	]
+	dispinterface ISciUsbMono
+	{
+	properties:
+		[id(DISPID_position), bindable]
+		VARIANT			position;
+		[id(DISPID_currentGrating), bindable]
+		long			currentGrating;
+		[id(DISPID_AmOpen), bindable]
+		VARIANT_BOOL	AmOpen;
+		[id(DISPID_NumberOfGratings), bindable]
+		long			NumberOfGratings;
+		[id(DISPID_ConfigFile), bindable]
+		BSTR			ConfigFile;
+		[id(DISPID_autoGrating), bindable]
+		VARIANT_BOOL	autoGrating;
+		[id(DISPID_INIFile)]
+		BSTR			INIFile;
+		[id(DISPID_AmBusy), readonly]
+		VARIANT_BOOL	AmBusy;
+		[id(DISPID_DisplayName), bindable]
+		BSTR			DisplayName;
+		[id(DISPID_WaitForComplete), bindable, helpstring("Do we wait for a time consuming process to finish?")]
+		VARIANT_BOOL	WaitForComplete;
+		[id(DISPID_HighSpeed), bindable]
+		long			HighSpeed;
+		// message handlers
+		[id(DISPID_OnError)]
+		IDispatch	*	OnError;
+		[id(DISPID_OnStatusMessage)]
+		IDispatch	*	OnStatusMessage;
+		[id(DISPID_OnHaveNewPosition)]
+		IDispatch	*	OnHaveNewPosition;
+		[id(DISPID_OnChangedGrating)]
+		IDispatch	*	OnChangedGrating;
+		[id(DISPID_OnAmInitialized)]
+		IDispatch	*	OnAmInitialized;
+		// specific for Arcus Motors
+		[id(DISPID_RunCurrent), bindable]
+		long			RunCurrent;
+		[id(DISPID_IdleCurrent), bindable]
+		long			IdleCurrent;
+		[id(DISPID_ApplyBacklashCorrection), bindable]
+		VARIANT_BOOL	ApplyBacklashCorrection;
+		[id(DISPID_BacklashSteps), bindable]
+		long			BacklashSteps;
+		[id(DISPID_Asynchronous), bindable]
+		VARIANT_BOOL	Asynchronous;
+		[id(DISPID_AllowChangeZeroOffset), readonly]
+		VARIANT_BOOL	AllowChangeZeroOffset;
+		// setup window
+		[id(DISPID_SetupWindow), helpstring("Setup window")]
+		long			SetupWindow;
+		[id(DISPID_RapidScanRunning), helpstring("flag rapid scan running")]
+		VARIANT_BOOL	RapidScanRunning;
+		[id(DISPID_PageSelected), helpstring("Page selected flag")]
+		VARIANT_BOOL	PageSelected;
+	methods:
+		[id(DISPID_MonoInfo), propget, bindable]
+		VARIANT			MonoInfo(
+							[in, out]	short int	*	Index);
+		[id(DISPID_MonoInfo), propput, bindable]
+		void			MonoInfo(
+							[in, out]	short int	*	Index,
+							[in]		VARIANT			newValue);
+		[id(DISPID_GratingInfo), propget, bindable]
+		VARIANT			GratingInfo(
+							[in, out]	short int	*	gratingNumber,
+							[in, out]	short int	*	Index);
+		[id(DISPID_GratingInfo), propput, bindable]
+		void			GratingInfo(
+							[in, out]	short int	*	gratingNumber,
+							[in, out]	short int	*	Index,
+							[in]		VARIANT			newValue);
+		[id(DISPID_moveTime), propget]
+		VARIANT			moveTime(
+							[in]		double			newPosition);
+		[id(DISPID_Setup)]
+		void			Setup();
+		[id(DISPID_SetGratingParams)]
+		VARIANT_BOOL	SetGratingParams();
+		[id(DISPID_IsValidPosition)]
+		VARIANT_BOOL	IsValidPosition(
+							[in]		double			position);
+		[id(DISPID_ConvertStepsToNM)]
+		VARIANT_BOOL	ConvertStepsToNM(
+							[in, out]	VARIANT_BOOL*	fToNM,
+							[in, out]	short int	*	gratingID,
+							[in, out]	double		*	position,
+							[in, out]	long		*	Steps);
+		[id(DISPID_Abort)]
+		void			Abort();
+		[id(DISPID_WriteConfig)]
+		void			WriteConfig(
+							[in, out]	BSTR		*	Config);
+		[id(DISPID_WriteINI)]
+		void			WriteINI(
+							[in, out]	BSTR		*	INIFile);
+		[id(DISPID_GetCounter)]
+		double			GetCounter();
+		[id(DISPID_setInitialPositions)]
+		VARIANT_BOOL	setInitialPositions(
+							[in, out]	VARIANT		*	currentGrating, 
+							[in, out]	VARIANT		*	autoGrating, 
+							[in, out]	VARIANT		*	CurrentPos);
+		[id(DISPID_SaveGratingZeroPosition)]
+		VARIANT_BOOL	SaveGratingZeroPosition(
+							[in, out]	short int	*	Grating, 
+							[in, out]	long		*	ZeroPos);
+		[id(DISPID_doInit)]
+		void			doInit();
+		[id(DISPID_CanAutoSelect)]
+		VARIANT_BOOL	CanAutoSelect();
+		[id(DISPID_GratingZeroOffset), propget, bindable, helpstring("Grating zero offset")]
+		long			GratingZeroOffset(
+							[in]		long			Grating);
+		[id(DISPID_GratingZeroOffset), propput, bindable, helpstring("Grating zero offset")]
+		void			GratingZeroOffset(
+							[in]		long			Grating,
+							[in]		long			zeroOffset);
+		[id(DISPID_GratingStepsPerNM), propget, bindable, helpstring("Grating steps per NM")]
+		double			GratingStepsPerNM(
+							[in]		long			Grating);
+		[id(DISPID_GratingStepsPerNM), propput, bindable, helpstring("Grating steps per NM")]
+		void			GratingStepsPerNM(
+							[in]		long			Grating,
+							[in]		double			stepsPerNM);
+		[id(DISPID_SetMotorControl), helpstring("Needed for compatibility")]
+		void			SetMotorControl(
+							[in, out]	IDispatch	**	ppdispMotorControl);
+		[id(DISPID_ConvertSteps), helpstring("Convert steps to nm")]
+		double			ConvertSteps(
+							[in]		long			Grating,
+							[in]		long			Steps);
+		[id(DISPID_ConvertNM), helpstring("Convert NM to steps")]
+		long			ConvertNM(
+							[in]		long			Grating,
+							[in]		double			nm);
+		[id(DISPID_DisplayConfigValues), helpstring("Display the configuration values")]
+		void			DisplayConfigValues();
+		[id(DISPID_StartRapidScan), helpstring("Start rapid scan running")]
+		VARIANT_BOOL	StartRapidScan(
+							[in]		long			grating,
+							[in]		double			startWavelength,
+							[in]		double			endWavelength,
+							[in]		double			NMPerSecond);
+		[id(DISPID_RemoveNamedObject), helpstring("Remove named object")]
+		void			RemoveNamedObject();
+	}
+	[
+		uuid(56859167-701F-4a3e-A29B-A8BEC2C019D7),
+		helpstring("_SciUsbMono event interface")
+	]
+	dispinterface _SciUsbMono
+	{
+	properties:
+	methods:
+		[id(DISPID_RequestMainWindow), helpstring("Request the main window")]
+		void			RequestMainWindow(
+							[out]		long		*	hwndMain);
+		[id(DISPID_Error), helpstring("Error string")]
+		void			MoveError(
+							[in]		BSTR			Error);
+		[id(DISPID_StatusMessage), helpstring("Status message")]
+		void			StatusMessage(
+							[in]		BSTR			Status,
+							[in]		VARIANT_BOOL	fAmBusy);
+		[id(DISPID_HaveNewPosition), helpstring("Have new position")]
+		void			HaveNewPosition(
+							[in]		double			position);
+		[id(DISPID_RequestChangeGrating), helpstring("Sent prior to grating change")]
+		void			RequestChangeGrating(
+							[in]		long			grating,
+							[out]		VARIANT_BOOL*	fAllow);
+		[id(DISPID_ChangedGrating), helpstring("Have changed the grating")]
+		void			ChangedGrating(
+							[in]		long			grating);
+		[id(DISPID_BusyStatusChange), helpstring("Change in the busy status")]
+		void			BusyStatusChange(
+							[in]		VARIANT_BOOL	fAmBusy);
+		[id(DISPID_QueryAllowChangePosition), helpstring("Ask client to approve position change")]
+		void			QueryAllowChangePosition(
+							[in]		double			newPosition,
+							[out]		VARIANT_BOOL*	fAllow);
+		[id(DISPID_QueryAllowChangeZeroOffset), helpstring("Ask if zero offset change is allowed")]
+		void			QueryAllowChangeZeroOffset(
+							[out]		VARIANT_BOOL*	fAllow);
+		[id(DISPID_RapidScanStepped), helpstring("Rapid scan was stepped")]
+		void			RapidScanStepped(
+							[in]		double			wavelength);
+		[id(DISPID_RapidScanEnded), helpstring("Rapid scan has ended")]
+		void			RapidScanEnded(
+							[in]		VARIANT_BOOL	fSuccess);
+	}
+	[
+		uuid(8ADBEF97-172D-4934-8E3C-B3D7F5A870FD),
+		helpstring("SciUsbMono class")
+	]
+	coclass SciUsbMono
+	{
+		[default]				dispinterface		ISciUsbMono;
+		[default, source]		dispinterface		_SciUsbMono;
+								interface			_clsIMono;
+		[source]				dispinterface		__clsIMono;
+	}
+	[
+		uuid(1A37A108-2DFB-4603-93B0-36CBF62C3304),
+		helpstring("Host object needed for initialization")
+	]
+	dispinterface IHostObject
+	{
+	properties:
+	methods:
+		[id(DISPID_Host_SendCommand), helpstring("Send command to Arcus")]
+		BSTR			SendCommand(
+							[in]		BSTR			Command);
+		[id(DISPID_Host_doDelay), helpstring("Delay for a given amount of milliseconds")]
+		void			doDelay(
+							[in]		long			delayTime);
+	}
+}
