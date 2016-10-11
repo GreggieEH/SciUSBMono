@@ -1330,11 +1330,41 @@ STDMETHODIMP CMyObject::CImpIDispatch::Invoke(
 		else if (0 != (wFlags & DISPATCH_PROPERTYPUT))
 			return this->SetBacklashSteps(pDispParams);
 		return DISP_E_MEMBERNOTFOUND;
+	case DISPID_ReInitOnScanStart:
+		if (0 != (wFlags & DISPATCH_PROPERTYGET))
+			return this->GetReInitOnScanStart(pVarResult);
+		else if (0 != (wFlags & DISPATCH_PROPERTYPUT))
+			return this->SetReInitOnScanStart(pDispParams);
+		return DISP_E_MEMBERNOTFOUND;
 	default:
 		return DISP_E_MEMBERNOTFOUND;
 	}
 	return S_OK;
 }
+
+
+HRESULT CMyObject::CImpIDispatch::GetReInitOnScanStart(
+	VARIANT		*	pVarResult)
+{
+	if (NULL == pVarResult) return E_INVALIDARG;
+	InitVariantFromBoolean(this->m_pMyObject->m_pMySciUsbMono->GetReInitOnScanStart(), pVarResult);
+	return S_OK;
+}
+
+HRESULT CMyObject::CImpIDispatch::SetReInitOnScanStart(
+	DISPPARAMS	*	pDispParams)
+{
+	HRESULT			hr;
+	VARIANTARG		varg;
+	UINT			uArgErr;
+	VariantInit(&varg);
+	hr = DispGetParam(pDispParams, DISPID_PROPERTYPUT, VT_BOOL, &varg, &uArgErr);
+	if (FAILED(hr)) return hr;
+	this->m_pMyObject->m_pMySciUsbMono->SetReInitOnScanStart(VARIANT_TRUE == varg.boolVal);
+	Utils_OnPropChanged(this->m_pMyObject, DISPID_ReInitOnScanStart);
+	return S_OK;
+}
+
 
 // set position using backlash correction if needed
 void CMyObject::CImpIDispatch::SetPosition(
@@ -3747,7 +3777,8 @@ CMyObject::CImp_clsIMono::CImp_clsIMono(CMyObject * pBackObj, IUnknown * punkOut
 	m_dispidReadConfig(DISPID_UNKNOWN),
 	m_dispidWriteConfig(DISPID_UNKNOWN),
 	m_dispidWaitForComplete(DISPID_UNKNOWN),
-	m_dispidGetGratingDispersion(DISPID_UNKNOWN)
+	m_dispidGetGratingDispersion(DISPID_UNKNOWN),
+	m_dispidScanStart(DISPID_UNKNOWN)
 {
 	HRESULT				hr;
 	ITypeInfo		*	pTypeInfo;
@@ -3781,6 +3812,7 @@ CMyObject::CImp_clsIMono::CImp_clsIMono(CMyObject * pBackObj, IUnknown * punkOut
 		Utils_GetMemid(this->m_pTypeInfo, TEXT("WriteConfig"), &m_dispidWriteConfig);
 		Utils_GetMemid(this->m_pTypeInfo, TEXT("WaitForComplete"), &m_dispidWaitForComplete);
 		Utils_GetMemid(this->m_pTypeInfo, L"GetGratingDispersion", &m_dispidGetGratingDispersion);
+		Utils_GetMemid(this->m_pTypeInfo, L"ScanStart", &m_dispidScanStart);
 		pTypeInfo->Release();
 	}
 }
@@ -3925,6 +3957,13 @@ STDMETHODIMP CMyObject::CImp_clsIMono::Invoke(
 	{
 		return this->GetGratingDispersion(pDispParams, pVarResult);
 	}
+	else if (dispIdMember == this->m_dispidScanStart)
+	{
+		if (0 != (wFlags & DISPATCH_METHOD))
+		{
+			return this->ScanStart();
+		}
+	}
 	return DISP_E_MEMBERNOTFOUND;
 }
 
@@ -4062,5 +4101,12 @@ HRESULT CMyObject::CImp_clsIMono::GetGratingDispersion(
 	hr = DispGetParam(pDispParams, 0, VT_I4, &varg, &uArgErr);
 	if (FAILED(hr)) return hr;
 	InitVariantFromDouble(this->m_pMyObject->m_pMySciUsbMono->GetGratingDispersion(varg.lVal), pVarResult);
+	return S_OK;
+}
+
+
+HRESULT CMyObject::CImp_clsIMono::ScanStart()
+{
+	this->m_pMyObject->m_pMySciUsbMono->ScanStart();
 	return S_OK;
 }

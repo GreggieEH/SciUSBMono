@@ -150,6 +150,11 @@ private:
 									VARIANT		*	pVarResult);
 		HRESULT					SetBacklashSteps(
 									DISPPARAMS	*	pDispParams);
+		HRESULT					GetReInitOnScanStart(
+									VARIANT		*	pVarResult);
+		HRESULT					SetReInitOnScanStart(
+									DISPPARAMS	*	pDispParams);
+
 	private:
 		CMyObject			*	m_pMyObject;
 		IUnknown			*	m_punkOuter;
@@ -703,6 +708,7 @@ private:
 		HRESULT					GetGratingDispersion(
 									DISPPARAMS	*	pDispParams,
 									VARIANT		*	pVarResult);
+		HRESULT					ScanStart();
 	private:
 		CMyObject			*	m_pMyObject;
 		IUnknown			*	m_punkOuter;
@@ -722,6 +728,8 @@ private:
 		DISPID					m_dispidWriteConfig;
 		DISPID					m_dispidWaitForComplete;
 		DISPID					m_dispidGetGratingDispersion;
+		DISPID					m_dispidScanStart;
+
 	};
 	// make the nested classes friends
 	friend CImpIDispatch;

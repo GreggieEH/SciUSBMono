@@ -73,6 +73,8 @@ library SciUsbMono
 		VARIANT_BOOL	RapidScanRunning;
 		[id(DISPID_PageSelected), helpstring("Page selected flag")]
 		VARIANT_BOOL	PageSelected;
+		[id(DISPID_ReInitOnScanStart), bindable, helpstring("Re initialization on scan start")]
+		VARIANT_BOOL	ReInitOnScanStart;
 	methods:
 		[id(DISPID_MonoInfo), propget, bindable]
 		VARIANT			MonoInfo(

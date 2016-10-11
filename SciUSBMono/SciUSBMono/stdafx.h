@@ -10,6 +10,7 @@
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
 // Windows Header Files:
 #include <windows.h>
+#include <Windowsx.h>
 #include <ole2.h>
 #include <olectl.h>
 

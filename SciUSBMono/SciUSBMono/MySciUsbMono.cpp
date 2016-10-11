@@ -64,11 +64,12 @@ CMySciUsbMono::CMySciUsbMono(CMyObject * pMyObject) :
 	m_pDlgRapidScan(NULL),
 	m_fRapidScanSuccess(FALSE),
 	// start up values
-	m_pStartupValues(NULL)
+	m_pStartupValues(NULL),
+	m_ReInitOnScanStart(TRUE)			// flag reinitialization on scan start
 {
 	// default model and serial number
 //	Utils_DoCopyString(&m_szModel, TEXT("9030"));
-	SHStrDup(L"9030", &m_szModel);
+	SHStrDup(L"9055", &m_szModel);
 //	Utils_DoCopyString(&m_szSerialNumber, TEXT("12345678"));
 	SHStrDup(L"12345678", &m_szSerialNumber);
 	// default motor ID
@@ -2629,5 +2630,25 @@ void CMySciUsbMono::DetermineTempOffset(
 		this->ConvertPosition(gratingID, 0.0, &posZero);
 		this->ConvertPosition(gratingID, pGratingInfo->ZeroPositionOffset, &posOffset);
 		pGratingInfo->tempZeroOffset	= posOffset - posZero;
+	}
+}
+
+BOOL CMySciUsbMono::GetReInitOnScanStart()
+{
+	return this->m_ReInitOnScanStart;
+}
+
+void CMySciUsbMono::SetReInitOnScanStart(
+	BOOL		ReInitOnScanStart)
+{
+	this->m_ReInitOnScanStart = ReInitOnScanStart;
+}
+
+// scan start actions
+void CMySciUsbMono::ScanStart()
+{
+	if (this->GetReInitOnScanStart())
+	{
+		this->SetAmOpen(TRUE);
 	}
 }

@@ -668,27 +668,6 @@ void CSciArcus::Home9055()
 		lMotorStatus = this->GetMotorStatus();
 		fError = 32 != lMotorStatus;
 	}
-/*
-	if (this->SendReceive(szSend, &szReceive))
-	{
-		// wait until complete
-		fDone = FALSE;
-		fError = FALSE;
-		while (!fDone)
-		{
-//			fDone = this->CheckMoveCompleted(&fNegativeLimit, &fPositiveLimit);
-			lMotorStatus = this->GetMotorStatus();
-			fDone = 0 != (lMotorStatus & 32);
-			if (fDone)
-				fError = 32 != lMotorStatus;
-			if (!fDone)
-			{
-				// yield for messages
-				MyYield();
-			}
-		}
-	}
-*/
 	// clear the limit switch
 //	if (fError)
 //	{

@@ -77,6 +77,7 @@
 #define				IDC_LINEAR						1049
 #define				IDC_QUADTERM					1050
 #define				IDC_EDITCURRENTPOSITION			1051
+#define				IDC_CHKREINIT					1052
 
 // strings
 

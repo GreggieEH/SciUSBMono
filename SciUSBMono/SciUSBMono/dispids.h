@@ -30,6 +30,7 @@
 #define				DISPID_RapidScanRunning				0x011a
 #define				DISPID_PageSelected					0x011b
 #define				DISPID_BacklashSteps				0x011c
+#define				DISPID_ReInitOnScanStart			0x011d
 
 // message handlers
 #define				DISPID_OnError						0x0200

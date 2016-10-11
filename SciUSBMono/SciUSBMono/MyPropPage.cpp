@@ -396,6 +396,7 @@ BOOL CMyPropPage::OnInitDialog()		// handler for WM_INITDIALOG
 	//this->SubclassEditBox(IDC_EDITPOSITION);
 	this->SubclassEditBox(IDC_EDITZEROADJUST);
 	this->SubclassEditBox(IDC_EDITCURRENTPOSITION);
+	this->DisplayReInitOnScanStart();
 	// clear am initializing flag
 	this->m_fAmInitializing	= FALSE;
 	return TRUE;
@@ -497,6 +498,14 @@ BOOL CMyPropPage::OnCommand(			// command handler
 			dlg.doOpenDialog(GetParent(this->m_hwndDlg), GetOurInstance());
 		}
 		return TRUE;
+	case IDC_CHKREINIT:
+		if (BN_CLICKED == wmEvent)
+		{
+			this->OnClickedInitOnScanStart();
+			return TRUE;
+		}
+		break;
+
 	default:
 		break;
 	}
@@ -955,6 +964,9 @@ void CMyPropPage::OnPropChanged(
 	case DISPID_autoGrating:
 		this->DisplayAutoGrating();
 		break;
+	case DISPID_ReInitOnScanStart:
+		this->DisplayReInitOnScanStart();
+		break;
 	default:
 		break;
 	}
@@ -1152,4 +1164,17 @@ BOOL CMyPropPage::GetObjectName(
 	}
 	return fSuccess;
 */
+}
+
+
+void CMyPropPage::DisplayReInitOnScanStart()
+{
+	BOOL		fReInitOnScanStart = Utils_GetBoolProperty(this->m_pdisp, DISPID_ReInitOnScanStart);
+	Button_SetCheck(GetDlgItem(this->m_hwndDlg, IDC_CHKREINIT), fReInitOnScanStart ? BST_CHECKED : BST_UNCHECKED);
+}
+
+void CMyPropPage::OnClickedInitOnScanStart()
+{
+	BOOL		fReInitOnScanStart = BST_CHECKED == Button_GetCheck(GetDlgItem(this->m_hwndDlg, IDC_CHKREINIT));
+	Utils_SetBoolProperty(this->m_pdisp, DISPID_ReInitOnScanStart, !fReInitOnScanStart);
 }

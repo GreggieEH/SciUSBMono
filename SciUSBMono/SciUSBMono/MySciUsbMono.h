@@ -102,6 +102,10 @@ public:
 							long			ZeroPos);
 	void				doInit();
 	BOOL				CanAutoSelect();
+	BOOL				GetReInitOnScanStart();
+	void				SetReInitOnScanStart(
+							BOOL			ReInitOnScanStart);
+
 	// run current
 	long				GetRunCurrent();
 	void				SetRunCurrent(
@@ -171,6 +175,9 @@ public:
 	// Grating dispersion calculation
 	double				GetGratingDispersion(
 							long			gratingID);
+	// scan start actions
+	void				ScanStart();
+
 protected:
 	struct GRATING_INFO;
 	GRATING_INFO	*	GetGratingInfo(
@@ -370,6 +377,7 @@ private:
 	CStartupValues	*	m_pStartupValues;
 	// motor ID
 	TCHAR				m_szMotorID[MAX_PATH];
+	BOOL				m_ReInitOnScanStart;			// flag reinitialization on scan start
 
 	// host object
 	class CHostObject : public IDispatch

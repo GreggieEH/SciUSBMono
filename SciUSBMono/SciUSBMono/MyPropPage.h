@@ -104,6 +104,9 @@ protected:
 	BOOL					GetObjectName(
 								IDispatch	*	pdisp,
 								LPTSTR		*	szName);
+	void					DisplayReInitOnScanStart();
+	void					OnClickedInitOnScanStart();
+
 private:
 	ULONG					m_cRefs;			// object reference count
 	HWND					m_hwndDlg;			// property page window handle
