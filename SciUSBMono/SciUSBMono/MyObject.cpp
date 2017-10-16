@@ -23,6 +23,7 @@ CMyObject::CMyObject(IUnknown * pUnkOuter) :
 	m_pImpISpecifyPropertyPages(NULL),
 	m_pImpIViewObject2(NULL),
 	m_pImp_clsIMono(NULL),
+	m_pImpISciMono(NULL),
 	// object reference count
 	m_cRefs(0),
 	// outer unknown for aggregation
@@ -60,7 +61,16 @@ CMyObject::CMyObject(IUnknown * pUnkOuter) :
 	m_dispidAmInitPropChanged(DISPID_UNKNOWN),
 	m_dispidAutoGratingPropChanged(DISPID_UNKNOWN),
 	// page selected flag
-	m_fPageSelected(FALSE)
+	m_fPageSelected(FALSE),
+	// ISciMono
+	m_iid_ISciMono(IID_NULL),
+	m_iid__SciMono(IID_NULL),
+	// _SciMono events
+	m_dispidPropChanged(DISPID_UNKNOWN),
+	m_dispidError(DISPID_UNKNOWN),
+	m_dispidBusyStatusChange(DISPID_UNKNOWN),
+	m_dispidMonochromatorPropChanged(DISPID_UNKNOWN),
+	m_dispidGratingPropChanged(DISPID_UNKNOWN)
 {
 	if (NULL == this->m_pUnkOuter) this->m_pUnkOuter = this;
 	// connection point array
@@ -84,6 +94,7 @@ CMyObject::~CMyObject(void)
 	Utils_DELETE_POINTER(m_pImpISpecifyPropertyPages);
 	Utils_DELETE_POINTER(m_pImpIViewObject2);
 	Utils_DELETE_POINTER(m_pImp_clsIMono);
+	Utils_DELETE_POINTER(m_pImpISciMono);
 	// connection point array
 	for (ULONG i=0; i<MAX_CONN_PTS; i++)
 		Utils_RELEASE_INTERFACE(this->m_paConnPts[i]);
@@ -137,6 +148,8 @@ STDMETHODIMP CMyObject::QueryInterface(
 		*ppv = this->m_pImpIViewObject2;
 	else if (riid == this->m_iid_clsIMono)
 		*ppv = this->m_pImp_clsIMono;
+	else if (riid == this->m_iid_ISciMono)
+		*ppv = this->m_pImpISciMono;
 	if (NULL != *ppv)
 	{
 		((IUnknown*)*ppv)->AddRef();
@@ -184,6 +197,7 @@ HRESULT CMyObject::Init()
 	this->m_pImpISpecifyPropertyPages		= new CImpISpecifyPropertyPages(this, this->m_pUnkOuter);
 	this->m_pImpIViewObject2				= new CImpIViewObject2(this, this->m_pUnkOuter);
 	this->m_pImp_clsIMono					= new CImp_clsIMono(this, this->m_pUnkOuter);
+	this->m_pImpISciMono					= new CImpISciMono(this, this->m_pUnkOuter);
 	// SourceSelector manager
 	this->m_pMySciUsbMono					= new CMySciUsbMono(this);
 	// window manager
@@ -203,6 +217,7 @@ HRESULT CMyObject::Init()
 		NULL != this->m_pImpISpecifyPropertyPages		&&
 		NULL != this->m_pImpIViewObject2				&&
 		NULL != this->m_pImp_clsIMono					&&
+		NULL != this->m_pImpISciMono					&&
 		NULL != this->m_pMySciUsbMono					&&
 		NULL != this->m_pMyWindow)
 	{
@@ -221,6 +236,14 @@ HRESULT CMyObject::Init()
 			{
 				hr = Utils_CreateConnectionPoint(this, this->m_iid__clsIMono,
 					&(this->m_paConnPts[CONN_PT__clsIMono]));
+			}
+		}
+		if (SUCCEEDED(hr))
+		{
+			hr = this->Init_SciMono();
+			if (SUCCEEDED(hr))
+			{
+				hr = Utils_CreateConnectionPoint(this, this->m_iid__SciMono, &(this->m_paConnPts[CONN_PT__SciMono]));
 			}
 		}
 	}
@@ -295,6 +318,30 @@ HRESULT CMyObject::Init__clsIMono()
 	return hr;
 }
 
+HRESULT CMyObject::Init_SciMono()
+{
+	HRESULT				hr;
+	ITypeInfo		*	pTypeInfo;
+	TYPEATTR		*	pTypeAttr;
+	hr = this->GetRefTypeInfo(L"_SciMono", &pTypeInfo);
+	if (SUCCEEDED(hr))
+	{
+		hr = pTypeInfo->GetTypeAttr(&pTypeAttr);
+		if (SUCCEEDED(hr))
+		{
+			this->m_iid__SciMono = pTypeAttr->guid;
+			pTypeInfo->ReleaseTypeAttr(pTypeAttr);
+		}
+		Utils_GetMemid(pTypeInfo, L"PropChanged", &m_dispidPropChanged);
+		Utils_GetMemid(pTypeInfo, L"Error", &m_dispidError);
+		Utils_GetMemid(pTypeInfo, L"BusyStatusChange", &m_dispidBusyStatusChange);
+		Utils_GetMemid(pTypeInfo, L"MonochromatorPropChanged", &m_dispidMonochromatorPropChanged);
+		Utils_GetMemid(pTypeInfo, L"GratingPropChanged", &m_dispidGratingPropChanged);
+		pTypeInfo->Release();
+	}
+	return hr;
+}
+
 HWND CMyObject::FireRequestMainWindow()
 {
 	VARIANTARG			varg;
@@ -315,6 +362,7 @@ void CMyObject::FireError(
 	InitVariantFromString(Error, &varg);
 	Utils_NotifySinks(this, IID__SciUsbMono, DISPID_Error, &varg, 1);
 	Utils_NotifySinks(this, this->m_iid__clsIMono, this->m_dispidMoveError, &varg, 1);
+	Utils_NotifySinks(this, this->m_iid__SciMono, this->m_dispidError, &varg, 1);
 	// call the event handler if it exists
 	if (NULL != this->m_pdispOnError)
 	{
@@ -391,6 +439,7 @@ void CMyObject::FireBusyStatusChange(
 	VARIANTARG				varg;
 	InitVariantFromBoolean(fBusy, &varg);
 	Utils_NotifySinks(this, IID__SciUsbMono, DISPID_BusyStatusChange, &varg, 1);
+	Utils_NotifySinks(this, this->m_iid__SciMono, this->m_dispidBusyStatusChange, &varg, 1);
 }
 
 BOOL CMyObject::FireQueryAllowChangePosition(
@@ -449,6 +498,31 @@ void CMyObject::FireAutoGratingPropChanged(
 	InitVariantFromBoolean(autoGrating, &varg);
 	Utils_NotifySinks(this, this->m_iid__clsIMono, this->m_dispidAutoGratingPropChanged, &varg, 1);
 }
+
+// _SciMono sink events
+void CMyObject::FirePropChanged(LPCTSTR PropName)
+{
+	VARIANTARG			 varg;
+	InitVariantFromString(PropName, &varg);
+	Utils_NotifySinks(this, this->m_iid__SciMono, this->m_dispidPropChanged, &varg, 1);
+	VariantClear(&varg);
+}
+void CMyObject::FireMonochromatorPropChanged(LPCTSTR propName)
+{
+	VARIANTARG			varg;
+	InitVariantFromString(propName, &varg);
+	Utils_NotifySinks(this, this->m_iid__SciMono, this->m_dispidMonochromatorPropChanged, &varg, 1);
+	VariantClear(&varg);
+}
+void CMyObject::FireGratingPropChanged(long gratingID, LPCTSTR propName)
+{
+	VARIANTARG			avarg[2];
+	InitVariantFromInt32(gratingID, &avarg[1]);
+	InitVariantFromString(propName, &avarg[0]);
+	Utils_NotifySinks(this, this->m_iid__SciMono, this->m_dispidGratingPropChanged, avarg, 2);
+	VariantClear(&avarg[0]);
+}
+
 
 
 // successful initialization
@@ -1620,11 +1694,13 @@ STDMETHODIMP CMyObject::CImpIConnectionPointContainer::FindConnectionPoint(
 	if (NULL == ppCP) return E_POINTER;
 	*ppCP	= NULL;
 	if (IID__SciUsbMono == riid)
-		pConnPt		= this->m_pBackObj->m_paConnPts[CONN_PT_CUSTOMSINK];
+		pConnPt = this->m_pBackObj->m_paConnPts[CONN_PT_CUSTOMSINK];
 	else if (IID_IPropertyNotifySink == riid)
-		pConnPt		= this->m_pBackObj->m_paConnPts[CONN_PT_PROPNOTIFY];
+		pConnPt = this->m_pBackObj->m_paConnPts[CONN_PT_PROPNOTIFY];
 	else if (riid == this->m_pBackObj->m_iid__clsIMono)
-		pConnPt		= this->m_pBackObj->m_paConnPts[CONN_PT__clsIMono];
+		pConnPt = this->m_pBackObj->m_paConnPts[CONN_PT__clsIMono];
+	else if (riid == this->m_pBackObj->m_iid__SciMono)
+		pConnPt = this->m_pBackObj->m_paConnPts[CONN_PT__SciMono];
 	if (NULL != pConnPt)
 	{
 		*ppCP		= pConnPt;
@@ -4107,6 +4183,687 @@ HRESULT CMyObject::CImp_clsIMono::GetGratingDispersion(
 
 HRESULT CMyObject::CImp_clsIMono::ScanStart()
 {
+	DoLogString(L"In ScanStart");
 	this->m_pMyObject->m_pMySciUsbMono->ScanStart();
+	return S_OK;
+}
+
+
+
+CMyObject::CImpISciMono::CImpISciMono(CMyObject * pBackObj, IUnknown * punkOuter) :
+	m_pMyObject(pBackObj),
+	m_punkOuter(punkOuter),
+	m_pTypeInfo(NULL),
+	m_dispidCurrentWavelength(DISPID_UNKNOWN),
+	m_dispidCurrentGrating(DISPID_UNKNOWN),
+	m_dispidAutoGrating(DISPID_UNKNOWN),
+	m_dispidAmInitialized(DISPID_UNKNOWN),
+	m_dispidModel(DISPID_UNKNOWN),
+	m_dispidSerialNumber(DISPID_UNKNOWN),
+	m_dispidNumGratings(DISPID_UNKNOWN),
+	m_dispidAmBusy(DISPID_UNKNOWN),
+	m_dispidMonochromatorProperties(DISPID_UNKNOWN),
+	m_dispidGratingProperties(DISPID_UNKNOWN),
+	m_dispidConfigFile(DISPID_UNKNOWN),
+	m_dispidDriveType(DISPID_UNKNOWN),
+	m_dispidMonochromatorProperty(DISPID_UNKNOWN),
+	m_dispidGratingProperty(DISPID_UNKNOWN),
+	m_dispidIsValidPosition(DISPID_UNKNOWN),
+	m_dispidGetGratingDispersion(DISPID_UNKNOWN)
+{
+	HRESULT				hr;
+	ITypeInfo		*	pTypeInfo;
+	TYPEATTR		*	pTypeAttr;
+
+	hr = this->m_pMyObject->GetRefTypeInfo(TEXT("ISciMono"), &pTypeInfo);
+	if (SUCCEEDED(hr))
+	{
+		// store the type info
+		this->m_pTypeInfo = pTypeInfo;
+		this->m_pTypeInfo->AddRef();
+		// get the interface ID
+		hr = this->m_pTypeInfo->GetTypeAttr(&pTypeAttr);
+		if (SUCCEEDED(hr))
+		{
+			this->m_pMyObject->m_iid_ISciMono = pTypeAttr->guid;
+			this->m_pTypeInfo->ReleaseTypeAttr(pTypeAttr);
+		}
+		Utils_GetMemid(this->m_pTypeInfo, L"CurrentWavelength", &m_dispidCurrentWavelength);
+		Utils_GetMemid(this->m_pTypeInfo, L"CurrentGrating", &m_dispidCurrentGrating);
+		Utils_GetMemid(this->m_pTypeInfo, L"AutoGrating", &m_dispidAutoGrating);
+		Utils_GetMemid(this->m_pTypeInfo, L"AmInitialized", &m_dispidAmInitialized);
+		Utils_GetMemid(this->m_pTypeInfo, L"Model", &m_dispidModel);
+		Utils_GetMemid(this->m_pTypeInfo, L"SerialNumber", &m_dispidSerialNumber);
+		Utils_GetMemid(this->m_pTypeInfo, L"NumGratings", &m_dispidNumGratings);
+		Utils_GetMemid(this->m_pTypeInfo, L"AmBusy", &m_dispidAmBusy);
+		Utils_GetMemid(this->m_pTypeInfo, L"MonochromatorProperties", &m_dispidMonochromatorProperties);
+		Utils_GetMemid(this->m_pTypeInfo, L"GratingProperties", &m_dispidGratingProperties);
+		Utils_GetMemid(this->m_pTypeInfo, L"ConfigFile", &m_dispidConfigFile);
+		Utils_GetMemid(this->m_pTypeInfo, L"DriveType", &m_dispidDriveType);
+		Utils_GetMemid(this->m_pTypeInfo, L"MonochromatorProperty", &m_dispidMonochromatorProperty);
+		Utils_GetMemid(this->m_pTypeInfo, L"GratingProperty", &m_dispidGratingProperty);
+		Utils_GetMemid(this->m_pTypeInfo, L"IsValidPosition", &m_dispidIsValidPosition);
+		Utils_GetMemid(this->m_pTypeInfo, L"GetGratingDispersion", &m_dispidGetGratingDispersion);
+		pTypeInfo->Release();
+	}
+}
+CMyObject::CImpISciMono::~CImpISciMono()
+{
+	Utils_RELEASE_INTERFACE(this->m_pTypeInfo);
+}
+// IUnknown methods
+STDMETHODIMP CMyObject::CImpISciMono::QueryInterface(
+	REFIID			riid,
+	LPVOID		*	ppv)
+{
+	return this->m_punkOuter->QueryInterface(riid, ppv);
+}
+STDMETHODIMP_(ULONG) CMyObject::CImpISciMono::AddRef()
+{
+	return this->m_punkOuter->AddRef();
+}
+STDMETHODIMP_(ULONG) CMyObject::CImpISciMono::Release()
+{
+	return this->m_punkOuter->Release();
+}
+// IDispatch methods
+STDMETHODIMP CMyObject::CImpISciMono::GetTypeInfoCount(
+	PUINT			pctinfo)
+{
+	*pctinfo = 1;
+	return S_OK;
+}
+STDMETHODIMP CMyObject::CImpISciMono::GetTypeInfo(
+	UINT			iTInfo,
+	LCID			lcid,
+	ITypeInfo	**	ppTInfo)
+{
+	if (NULL != this->m_pTypeInfo)
+	{
+		*ppTInfo = this->m_pTypeInfo;
+		this->m_pTypeInfo->AddRef();
+		return S_OK;
+	}
+	else
+	{
+		*ppTInfo = NULL;
+		return E_FAIL;
+	}
+}
+STDMETHODIMP CMyObject::CImpISciMono::GetIDsOfNames(
+	REFIID			riid,
+	OLECHAR		**  rgszNames,
+	UINT			cNames,
+	LCID			lcid,
+	DISPID		*	rgDispId)
+{
+	HRESULT			hr;
+	ITypeInfo	*	pTypeInfo;
+	hr = this->GetTypeInfo(0, LOCALE_USER_DEFAULT, &pTypeInfo);
+	if (SUCCEEDED(hr))
+	{
+		hr = DispGetIDsOfNames(pTypeInfo, rgszNames, cNames, rgDispId);
+		pTypeInfo->Release();
+	}
+	return hr;
+}
+STDMETHODIMP CMyObject::CImpISciMono::Invoke(
+	DISPID			dispIdMember,
+	REFIID			riid,
+	LCID			lcid,
+	WORD			wFlags,
+	DISPPARAMS	*	pDispParams,
+	VARIANT		*	pVarResult,
+	EXCEPINFO	*	pExcepInfo,
+	PUINT			puArgErr)
+{
+	if (dispIdMember == m_dispidCurrentWavelength)
+	{
+		if (0 != (wFlags & DISPATCH_PROPERTYGET))
+		{
+			return this->GetCurrentWavelength(pVarResult);
+		}
+		else if (0 != (wFlags & DISPATCH_PROPERTYPUT))
+		{
+			return this->SetCurrentWavelength(pDispParams);
+		}
+	}
+	else if (dispIdMember == m_dispidCurrentGrating)
+	{
+		if (0 != (wFlags & DISPATCH_PROPERTYGET))
+		{
+			return this->GetCurrentGrating(pVarResult);
+		}
+		else if (0 != (wFlags & DISPATCH_PROPERTYPUT))
+		{
+			return this->SetCurrentGrating(pDispParams);
+		}
+	}
+	else if (dispIdMember == m_dispidAutoGrating)
+	{
+		if (0 != (wFlags & DISPATCH_PROPERTYGET))
+		{
+			return this->GetAutoGrating(pVarResult);
+		}
+		else if (0 != (wFlags & DISPATCH_PROPERTYPUT))
+		{
+			return this->SetAutoGrating(pDispParams);
+		}
+	}
+	else if (dispIdMember == m_dispidAmInitialized)
+	{
+		if (0 != (wFlags & DISPATCH_PROPERTYGET))
+		{
+			return this->GetAmInitialized(pVarResult);
+		}
+		else if (0 != (wFlags & DISPATCH_PROPERTYPUT))
+		{
+			return this->SetAmInitialized(pDispParams);
+		}
+	}
+	else if (dispIdMember == m_dispidModel)
+	{
+		if (0 != (wFlags & DISPATCH_PROPERTYGET))
+		{
+			return this->GetModel(pVarResult);
+		}
+	}
+	else if (dispIdMember == m_dispidSerialNumber)
+	{
+		if (0 != (wFlags & DISPATCH_PROPERTYGET))
+		{
+			return this->GetSerialNumber(pVarResult);
+		}
+	}
+	else if (dispIdMember == m_dispidNumGratings)
+	{
+		if (0 != (wFlags & DISPATCH_PROPERTYGET))
+		{
+			return this->GetNumGratings(pVarResult);
+		}
+	}
+	else if (dispIdMember == m_dispidAmBusy)
+	{
+		if (0 != (wFlags & DISPATCH_PROPERTYGET))
+		{
+			return this->GetAmBusy(pVarResult);
+		}
+	}
+	else if (dispIdMember == m_dispidMonochromatorProperties)
+	{
+		if (0 != (wFlags & DISPATCH_PROPERTYGET))
+		{
+			return this->GetMonochromatorProperties(pVarResult);
+		}
+	}
+	else if (dispIdMember == m_dispidGratingProperties)
+	{
+		if (0 != (wFlags & DISPATCH_PROPERTYGET))
+		{
+			return this->GetGratingProperties(pVarResult);
+		}
+	}
+	else if (dispIdMember == m_dispidConfigFile)
+	{
+		if (0 != (wFlags & DISPATCH_PROPERTYGET))
+		{
+			return this->GetConfigFile(pVarResult);
+		}
+		else if (0 != (wFlags & DISPATCH_PROPERTYPUT))
+		{
+			return this->SetConfigFile(pDispParams);
+		}
+	}
+	else if (dispIdMember == m_dispidDriveType)
+	{
+		if (0 != (wFlags & DISPATCH_PROPERTYGET))
+		{
+			return this->GetDriveType(pVarResult);
+		}
+	}
+	else if (dispIdMember == m_dispidMonochromatorProperty)
+	{
+		if (0 != (wFlags & DISPATCH_PROPERTYGET))
+		{
+			return this->GetMonochromatorProperty(pDispParams, pVarResult);
+		}
+		else if (0 != (wFlags & DISPATCH_PROPERTYPUT))
+		{
+			return this->SetMonochromatorProperty(pDispParams);
+		}
+	}
+	else if (dispIdMember == m_dispidGratingProperty)
+	{
+		if (0 != (wFlags & DISPATCH_PROPERTYGET))
+		{
+			return this->GetGratingProperty(pDispParams, pVarResult);
+		}
+		else if (0 != (wFlags & DISPATCH_PROPERTYPUT))
+		{
+			return this->SetGratingProperty(pDispParams);
+		}
+	}
+	else if (dispIdMember == m_dispidIsValidPosition)
+	{
+		if (0 != (wFlags & DISPATCH_METHOD))
+		{
+			return this->IsValidPosition(pDispParams, pVarResult);
+		}
+	}
+	else if (dispIdMember == m_dispidGetGratingDispersion)
+	{
+		if (0 != (wFlags & DISPATCH_METHOD))
+		{
+			return this->GetGratingDispersion(pDispParams, pVarResult);
+		}
+	}
+	return DISP_E_MEMBERNOTFOUND;
+}
+
+HRESULT CMyObject::CImpISciMono::GetCurrentWavelength(VARIANT* pVarResult)
+{
+	if (NULL == pVarResult) return E_INVALIDARG;
+	InitVariantFromDouble(this->m_pMyObject->m_pMySciUsbMono->Getposition(), pVarResult);
+	return S_OK;
+}
+HRESULT CMyObject::CImpISciMono::SetCurrentWavelength(DISPPARAMS* pDispParams)
+{
+	HRESULT				hr;
+	VARIANTARG			varg;
+	UINT				uArgErr;
+	VariantInit(&varg);
+	hr = DispGetParam(pDispParams, DISPID_PROPERTYPUT, VT_R8, &varg, &uArgErr);
+	if (FAILED(hr)) return hr;
+	this->m_pMyObject->m_pMySciUsbMono->Setposition(varg.dblVal);
+	this->m_pMyObject->FirePropChanged(L"CurrentWavelength");
+	return S_OK;
+}
+HRESULT	CMyObject::CImpISciMono::GetCurrentGrating(VARIANT* pVarResult)
+{
+	if (NULL == pVarResult) return E_INVALIDARG;
+	InitVariantFromInt32(this->m_pMyObject->m_pMySciUsbMono->GetcurrentGrating(), pVarResult);
+	return S_OK;
+}
+HRESULT	CMyObject::CImpISciMono::SetCurrentGrating(DISPPARAMS* pDispParams)
+{
+	HRESULT				hr;
+	VARIANTARG			varg;
+	UINT				uArgErr;
+	VariantInit(&varg);
+	hr = DispGetParam(pDispParams, DISPID_PROPERTYPUT, VT_I4, &varg, &uArgErr);
+	if (FAILED(hr)) return hr;
+	this->m_pMyObject->m_pMySciUsbMono->SetcurrentGrating(varg.lVal);
+	if (this->m_pMyObject->m_pMySciUsbMono->GetcurrentGrating() == varg.lVal)
+	{
+		this->m_pMyObject->FirePropChanged(L"CurrentGrating");
+	}
+	return S_OK;
+}
+HRESULT	CMyObject::CImpISciMono::GetAutoGrating(VARIANT* pVarResult)
+{
+	if (NULL == pVarResult) return E_INVALIDARG;
+	InitVariantFromBoolean(this->m_pMyObject->m_pMySciUsbMono->GetautoGrating(), pVarResult);
+	return S_OK;
+}
+HRESULT	CMyObject::CImpISciMono::SetAutoGrating(DISPPARAMS* pDispParams)
+{
+	HRESULT				hr;
+	VARIANTARG			varg;
+	UINT				uArgErr;
+	VariantInit(&varg);
+	hr = DispGetParam(pDispParams, DISPID_PROPERTYPUT, VT_BOOL, &varg, &uArgErr);
+	if (FAILED(hr)) return hr;
+	this->m_pMyObject->m_pMySciUsbMono->SetautoGrating(VARIANT_TRUE == varg.boolVal);
+//	this->m_pMyObject->FirePropChanged(L"AutoGrating");
+	return S_OK;
+}
+HRESULT	CMyObject::CImpISciMono::GetAmInitialized(VARIANT* pVarResult)
+{
+	if (NULL == pVarResult) return E_INVALIDARG;
+	InitVariantFromBoolean(this->m_pMyObject->m_pMySciUsbMono->GetAmOpen(), pVarResult);
+	return S_OK;
+}
+HRESULT	CMyObject::CImpISciMono::SetAmInitialized(DISPPARAMS* pDispParams)
+{
+	HRESULT				hr;
+	VARIANTARG			varg;
+	UINT				uArgErr;
+	BOOL				init;
+	VariantInit(&varg);
+	hr = DispGetParam(pDispParams, DISPID_PROPERTYPUT, VT_BOOL, &varg, &uArgErr);
+	if (FAILED(hr)) return hr;
+	init = VARIANT_TRUE == varg.boolVal;
+	this->m_pMyObject->m_pMySciUsbMono->SetAmOpen(init);
+	if (this->m_pMyObject->m_pMySciUsbMono->GetAmOpen() == init)
+	{
+		this->m_pMyObject->FirePropChanged(L"AmInitialized");
+	}
+	return S_OK;
+}
+HRESULT	CMyObject::CImpISciMono::GetModel(VARIANT* pVarResult)
+{
+	if (NULL == pVarResult) return E_INVALIDARG;
+	this->m_pMyObject->m_pMySciUsbMono->GetMonoInfo(0, pVarResult);
+	return S_OK;
+}
+HRESULT	CMyObject::CImpISciMono::GetSerialNumber(VARIANT* pVarResult)
+{
+	if (NULL == pVarResult) return E_INVALIDARG;
+	this->m_pMyObject->m_pMySciUsbMono->GetMonoInfo(1, pVarResult);
+	return S_OK;
+}
+HRESULT	CMyObject::CImpISciMono::GetNumGratings(VARIANT* pVarResult)
+{
+	if (NULL == pVarResult) return E_INVALIDARG;
+	InitVariantFromInt32(this->m_pMyObject->m_pMySciUsbMono->GetNumberOfGratings(), pVarResult);
+	return S_OK;
+}
+HRESULT	CMyObject::CImpISciMono::GetAmBusy(VARIANT* pVarResult)
+{
+	if (NULL == pVarResult) return E_INVALIDARG;
+	InitVariantFromBoolean(FALSE, pVarResult);
+	return S_OK;
+}
+
+HRESULT	CMyObject::CImpISciMono::GetMonochromatorProperties(VARIANT* pVarResult)
+{
+	if (NULL == pVarResult) return E_INVALIDARG;
+	PCWSTR  rgStrings[] = { L"InputAngle", L"OutputAngle", L"GearTeeth", L"IdleCurrent", L"RunCurrent", L"HighSpeed", L"StepsPerRev" };
+	InitVariantFromStringArray(rgStrings, ARRAYSIZE(rgStrings), pVarResult);
+	return S_OK;
+}
+HRESULT	CMyObject::CImpISciMono::GetGratingProperties(VARIANT* pVarResult)
+{
+	if (NULL == pVarResult) return E_INVALIDARG;
+	PCWSTR rgStrings[] = { L"Pitch", L"MaxEffectiveWavelength", L"MinEffectiveWavelength", L"Resolution", L"PhaseError",
+		L"OffsetFactor", L"LinearFactor", L"QuadFactor", L"ZeroPosition" };
+	InitVariantFromStringArray(rgStrings, ARRAYSIZE(rgStrings), pVarResult);
+	return S_OK;
+}
+HRESULT	CMyObject::CImpISciMono::GetConfigFile(VARIANT* pVarResult)
+{
+	if (NULL == pVarResult) return E_INVALIDARG;
+	LPTSTR			szConfig = NULL;
+	this->m_pMyObject->m_pMySciUsbMono->GetConfigFile(&szConfig);
+	if (NULL != szConfig)
+	{
+		InitVariantFromString(szConfig, pVarResult);
+		CoTaskMemFree((LPVOID)szConfig);
+	}
+//	InitVariantFromString(this->m_pMyObject->m_szConfigFile, pVarResult);
+	return S_OK;
+}
+HRESULT	CMyObject::CImpISciMono::SetConfigFile(DISPPARAMS* pDispParams)
+{
+	HRESULT				hr;
+	VARIANTARG			varg;
+	UINT				uArgErr;
+	VariantInit(&varg);
+	hr = DispGetParam(pDispParams, DISPID_PROPERTYPUT, VT_BSTR, &varg, &uArgErr);
+	if (FAILED(hr)) return hr;
+	this->m_pMyObject->m_pMySciUsbMono->SetConfigFile(varg.bstrVal);
+	this->m_pMyObject->FirePropChanged(L"ConfigFile");
+	VariantClear(&varg);
+	return S_OK;
+}
+HRESULT	CMyObject::CImpISciMono::GetDriveType(VARIANT* pVarResult)
+{
+	if (NULL == pVarResult) return E_INVALIDARG;
+	// 14 is drive type as string
+	VARIANT			Value;
+	this->m_pMyObject->m_pMySciUsbMono->GetMonoInfo(14, &Value);
+//	{
+		VariantChangeType(&Value, &Value, 0, VT_BSTR);
+		InitVariantFromInt16(0 == lstrcmpi(Value.bstrVal, L"SineDrive") ? 0 : 1, pVarResult);
+		VariantClear(&Value);
+//	}
+	return S_OK;
+}
+HRESULT	CMyObject::CImpISciMono::GetMonochromatorProperty(DISPPARAMS* pDispParams, VARIANT* pVarResult)
+{
+	if (NULL == pVarResult) return E_INVALIDARG;
+	HRESULT				hr;
+	VARIANTARG			varg;
+	UINT				uArgErr;
+	short				index = -1;
+	VariantInit(&varg);
+	hr = DispGetParam(pDispParams, 0, VT_BSTR, &varg, &uArgErr);
+	if (FAILED(hr)) return hr;
+	//{L"InputAngle", L"OutputAngle", L"GearTeeth", L"IdleCurrent", L"RunCurrent", L"HighSpeed", L"StepsPerRev"};
+	if (0 == lstrcmpi(varg.bstrVal, L"InputAngle"))
+	{
+		index = 7;
+	}
+	else if (0 == lstrcmpi(varg.bstrVal, L"OutputAngle"))
+	{
+		index = 8;
+	}
+	else if (0 == lstrcmpi(varg.bstrVal, L"GearTeeth"))
+	{
+		index = 15;
+	}
+	else if (0 == lstrcmpi(varg.bstrVal, L"IdleCurrent"))
+	{
+		index = 17;
+	}
+	else if (0 == lstrcmpi(varg.bstrVal, L"RunCurrent"))
+	{
+		index = 18;
+	}
+	else if (0 == lstrcmpi(varg.bstrVal, L"HighSpeed"))
+	{
+		index = 19;
+	}
+	else if (0 == lstrcmpi(varg.bstrVal, L"StepsPerRev"))
+	{
+		index = 20;
+	}
+	VariantClear(&varg);
+	if (index >= 0)
+		this->m_pMyObject->m_pMySciUsbMono->GetMonoInfo(index, pVarResult);
+	return S_OK;
+}
+HRESULT	CMyObject::CImpISciMono::SetMonochromatorProperty(DISPPARAMS* pDispParams)
+{
+	HRESULT				hr;
+	VARIANTARG			varg;
+	UINT				uArgErr;
+	short				index;
+	VARIANT				varCopy;
+	if (2 != pDispParams->cArgs) return DISP_E_BADPARAMCOUNT;
+	VariantInit(&varg);
+	hr = DispGetParam(pDispParams, DISPID_PROPERTYPUT, VT_BSTR, &varg, &uArgErr);
+	if (FAILED(hr)) return hr;
+	if (0 == lstrcmpi(varg.bstrVal, L"InputAngle"))
+	{
+		index = 7;
+	}
+	else if (0 == lstrcmpi(varg.bstrVal, L"OutputAngle"))
+	{
+		index = 8;
+	}
+	else if (0 == lstrcmpi(varg.bstrVal, L"GearTeeth"))
+	{
+		index = 15;
+	}
+	else if (0 == lstrcmpi(varg.bstrVal, L"IdleCurrent"))
+	{
+		index = 17;
+	}
+	else if (0 == lstrcmpi(varg.bstrVal, L"RunCurrent"))
+	{
+		index = 18;
+	}
+	else if (0 == lstrcmpi(varg.bstrVal, L"HighSpeed"))
+	{
+		index = 19;
+	}
+	else if (0 == lstrcmpi(varg.bstrVal, L"StepsPerRev"))
+	{
+		index = 20;
+	}
+	if (index >= 0)
+	{
+		VariantInit(&varCopy);
+		VariantCopy(&varCopy, &(pDispParams->rgvarg[0]));
+		this->m_pMyObject->m_pMySciUsbMono->SetMonoInfo(index, &varCopy);
+		VariantClear(&varCopy);
+		this->m_pMyObject->FireMonochromatorPropChanged(varg.bstrVal);
+	}
+	VariantClear(&varg);
+	return S_OK;
+}
+HRESULT	CMyObject::CImpISciMono::GetGratingProperty(DISPPARAMS* pDispParams, VARIANT* pVarResult)
+{
+	if (NULL == pVarResult) return E_INVALIDARG;
+	HRESULT				hr;
+	VARIANTARG			varg;
+	UINT				uArgErr;
+	long				gratingID;
+	TCHAR				szProperty[MAX_PATH];
+	short				index = -1;
+
+	//	PCWSTR rgStrings[] = { L"Pitch", L"MaxEffectiveWavelength", L"MinEffectiveWavelength", L"Resolution", L"PhaseError", L"OffsetFactor", L"LinearFactor", L"QuadFactor", L"ZeroPosition", L"", L"", L"", L"", L"", L"" };
+
+	VariantInit(&varg);
+	hr = DispGetParam(pDispParams, 0, VT_I4, &varg, &uArgErr);
+	if (FAILED(hr)) return hr;
+	gratingID = varg.lVal;
+	hr = DispGetParam(pDispParams, 1, VT_BSTR, &varg, &uArgErr);
+	if (FAILED(hr)) return hr;
+	StringCchCopy(szProperty, MAX_PATH, varg.bstrVal);
+	VariantClear(&varg);
+	if (0 == lstrcmpi(szProperty, L"Pitch"))
+	{
+		index = 0;
+	}
+	else if (0 == lstrcmpi(szProperty, L"MaxEffectiveWavelength"))
+	{
+		index = 2;
+	}
+	else if (0 == lstrcmpi(szProperty, L"MinEffectiveWavelength"))
+	{
+		index = 3;
+	}
+	else if (0 == lstrcmpi(szProperty, L"Resolution"))
+	{
+		index = 7;
+	}
+	else if (0 == lstrcmpi(szProperty, L"PhaseError"))
+	{
+		index = 6;
+	}
+	else if (0 == lstrcmpi(szProperty, L"OffsetFactor"))
+	{
+		index = 20;
+	}
+	else if (0 == lstrcmpi(szProperty, L"LinearFactor"))
+	{
+		index = 21;
+	}
+	else if (0 == lstrcmpi(szProperty, L"QuadFactor"))
+	{
+		index = 22;
+	}
+	else if (0 == lstrcmpi(szProperty, L"ZeroPosition"))
+	{
+		index = 4;
+	}
+	if (index >= 0)
+	{
+		this->m_pMyObject->m_pMySciUsbMono->GetGratingInfo(gratingID, index, pVarResult);
+	}
+
+	return S_OK;
+}
+HRESULT	CMyObject::CImpISciMono::SetGratingProperty(DISPPARAMS* pDispParams)
+{
+	HRESULT				hr;
+	VARIANTARG			varg;
+	UINT				uArgErr;
+	long				gratingID;
+	TCHAR				szProperty[MAX_PATH];
+	short				index = -1;
+	VARIANT				varCopy;
+
+	if (3 != pDispParams->cArgs) return DISP_E_BADPARAMCOUNT;
+	VariantInit(&varg);
+	hr = DispGetParam(pDispParams, 0, VT_I4, &varg, &uArgErr);
+	if (FAILED(hr)) return hr;
+	gratingID = varg.lVal;
+	hr = DispGetParam(pDispParams, 1, VT_BSTR, &varg, &uArgErr);
+	if (FAILED(hr)) return hr;
+	StringCchCopy(szProperty, MAX_PATH, varg.bstrVal);
+	VariantClear(&varg);
+	if (0 == lstrcmpi(szProperty, L"Pitch"))
+	{
+		index = 0;
+	}
+	else if (0 == lstrcmpi(szProperty, L"MaxEffectiveWavelength"))
+	{
+		index = 2;
+	}
+	else if (0 == lstrcmpi(szProperty, L"MinEffectiveWavelength"))
+	{
+		index = 3;
+	}
+	else if (0 == lstrcmpi(szProperty, L"Resolution"))
+	{
+		index = 7;
+	}
+	else if (0 == lstrcmpi(szProperty, L"PhaseError"))
+	{
+		index = 6;
+	}
+	else if (0 == lstrcmpi(szProperty, L"OffsetFactor"))
+	{
+		index = 20;
+	}
+	else if (0 == lstrcmpi(szProperty, L"LinearFactor"))
+	{
+		index = 21;
+	}
+	else if (0 == lstrcmpi(szProperty, L"QuadFactor"))
+	{
+		index = 22;
+	}
+	else if (0 == lstrcmpi(szProperty, L"ZeroPosition"))
+	{
+		index = 4;
+	}
+	if (index >= 0)
+	{
+		VariantInit(&varCopy);
+		VariantCopy(&varCopy, &(pDispParams->rgvarg[0]));
+		this->m_pMyObject->m_pMySciUsbMono->SetGratingInfo(gratingID, index, &varCopy);
+		VariantClear(&varCopy);
+		this->m_pMyObject->FireGratingPropChanged(gratingID, szProperty);
+	}
+	return S_OK;
+}
+
+HRESULT	CMyObject::CImpISciMono::IsValidPosition(DISPPARAMS* pDispParams, VARIANT* pVarResult)
+{
+	if (NULL == pVarResult) return E_INVALIDARG;
+	HRESULT				hr;
+	VARIANTARG			varg;
+	UINT				uArgErr;
+	VariantInit(&varg);
+	hr = DispGetParam(pDispParams, 0, VT_R8, &varg, &uArgErr);
+	if (FAILED(hr)) return hr;
+	InitVariantFromBoolean(this->m_pMyObject->m_pMySciUsbMono->IsValidPosition(varg.dblVal), pVarResult);
+	return S_OK;
+}
+HRESULT	CMyObject::CImpISciMono::GetGratingDispersion(DISPPARAMS* pDispParams, VARIANT* pVarResult)
+{
+	if (NULL == pVarResult) return E_INVALIDARG;
+	HRESULT				hr;
+	VARIANTARG			varg;
+	UINT				uArgErr;
+	double				dispersion = 5.0;
+	VariantInit(&varg);
+	hr = DispGetParam(pDispParams, 0, VT_I4, &varg, &uArgErr);
+	if (FAILED(hr)) return hr;
+	InitVariantFromDouble(dispersion, pVarResult);
 	return S_OK;
 }

@@ -26,10 +26,11 @@
 #include "G:\Users\Greg\Documents\Visual Studio 2015\Projects\MyUtils\MyUtils\myutils.h"
 #include "resource.h"
 
-#define				MAX_CONN_PTS				3
+#define				MAX_CONN_PTS				4
 #define				CONN_PT_CUSTOMSINK			0
 #define				CONN_PT_PROPNOTIFY			1
 #define				CONN_PT__clsIMono			2
+#define				CONN_PT__SciMono			3
 
 #define				STREAM_NAME					TEXT("Contents")
 

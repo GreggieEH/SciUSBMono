@@ -4,6 +4,9 @@
 #include "stdafx.h"
 #include "MyFactory.h"
 #include "MyGuids.h"
+#include <MyCatid.h>
+
+#define				MY_CATID			CATID_SciMono
 
 // local functions
 BOOL SetRegKeyValue(
@@ -21,7 +24,10 @@ void UnregisterPropPage(
 	REFCLSID		clsid,
 	LPTSTR			szName,
 	LPTSTR			szProgID);
-
+HRESULT	RegisterCatid();
+HRESULT UnRegisterCatid();
+BOOL CheckCatRegistered();		// check if our category is registered
+BOOL RegisterCat();
 
 STDAPI DllCanUnloadNow(void)
 {
@@ -144,6 +150,8 @@ STDAPI DllRegisterServer(void)
 	hr = LoadTypeLibEx(szModulePath, REGKIND_REGISTER, &pITypeLib);
 	if (SUCCEEDED(hr))
 		pITypeLib->Release();
+	// register our catid
+	RegisterCatid();
 
 	// register the property page
 	RegisterPropPage(CLSID_PropPageSciUsbMono,
@@ -190,6 +198,9 @@ STDAPI DllUnregisterServer(void)
 
 	// unregister the type library
 	hr = UnRegisterTypeLib(LIBID_SciUsbMono, 1, 0, 0x09, SYS_WIN32);
+
+	// unregister cat
+	UnRegisterCatid();
 
 	// unregister the property page
 	UnregisterPropPage(CLSID_PropPageSciUsbMono,
@@ -324,5 +335,93 @@ HRESULT MyStringFromCLSID(
 	return hr;
 }
 
+
+HRESULT	RegisterCatid()
+{
+	HRESULT				hr;
+	ICatRegister	*	pCatRegister = NULL;
+	CATID				arrCatid[1];
+
+	// make sure our category is registered
+	if (!CheckCatRegistered())
+	{
+		if (!RegisterCat()) return E_FAIL;
+	}
+	// get ICatRegister
+	hr = CoCreateInstance(CLSID_StdComponentCategoriesMgr, NULL, CLSCTX_INPROC_SERVER, IID_ICatRegister, (LPVOID*)&pCatRegister);
+	if (SUCCEEDED(hr))
+	{
+		arrCatid[0] = MY_CATID;
+		hr = pCatRegister->RegisterClassImplCategories(CLSID_SciUsbMono, 1, arrCatid);
+		pCatRegister->Release();
+	}
+	return hr;
+}
+HRESULT UnRegisterCatid()
+{
+	HRESULT				hr;
+	ICatRegister	*	pCatRegister = NULL;
+	CATID				arrCatid[1];
+
+	// check if category registered
+	if (!CheckCatRegistered()) return S_FALSE;
+	// get ICatRegister
+	hr = CoCreateInstance(CLSID_StdComponentCategoriesMgr, NULL, CLSCTX_INPROC_SERVER, IID_ICatRegister, (LPVOID*)&pCatRegister);
+	if (SUCCEEDED(hr))
+	{
+		arrCatid[0] = MY_CATID;
+		hr = pCatRegister->UnRegisterClassImplCategories(CLSID_SciUsbMono, 1, arrCatid);
+		pCatRegister->Release();
+	}
+	return hr;
+}
+
+BOOL CheckCatRegistered()		// check if our category is registered
+{
+	HRESULT				hr;
+	ICatInformation	*	pCatInfo = NULL;
+	IEnumCATEGORYINFO*	pEnum = NULL;
+	CATEGORYINFO		catInfo;
+	BOOL				fSuccess = FALSE;
+
+	hr = CoCreateInstance(CLSID_StdComponentCategoriesMgr, NULL, CLSCTX_INPROC_SERVER, IID_ICatInformation, (LPVOID*)&pCatInfo);
+	if (SUCCEEDED(hr))
+	{
+		hr = pCatInfo->EnumCategories(GetUserDefaultLCID(), &pEnum);
+		if (SUCCEEDED(hr))
+		{
+			fSuccess = FALSE;
+			while (!fSuccess && S_OK == pEnum->Next(1, &catInfo, NULL))
+			{
+				// check the cat id
+				if (catInfo.catid == MY_CATID)
+				{
+					fSuccess = TRUE;
+				}
+			}
+			pEnum->Release();
+		}
+		pCatInfo->Release();
+	}
+	return fSuccess;
+}
+
+BOOL RegisterCat()					// register our category
+{
+	HRESULT				hr;
+	ICatRegister	*	pCatRegister = NULL;
+	CATEGORYINFO		catInfo;
+
+	hr = CoCreateInstance(CLSID_StdComponentCategoriesMgr, NULL, CLSCTX_INPROC_SERVER, IID_ICatRegister, (LPVOID*)&pCatRegister);
+	if (SUCCEEDED(hr))
+	{
+		catInfo.catid = MY_CATID;
+		catInfo.lcid = LOCALE_USER_DEFAULT;
+		StringCchCopy(catInfo.szDescription, 128, L"Sciencetech Monochromator Objects");
+		hr = pCatRegister->RegisterCategories(1, &catInfo);
+		pCatRegister->Release();
+	}
+	return SUCCEEDED(hr);
+}
 
 

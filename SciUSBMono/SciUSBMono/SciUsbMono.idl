@@ -13,6 +13,7 @@ library SciUsbMono
 {
 	importlib("stdole32.tlb");
 	import "IMono.idl";
+	import "ISciMono.idl";
 	[
 		uuid(F003B656-547D-4c79-8E7B-2BEC922BFE88),
 		helpstring("ISciUsbMono interface")
@@ -222,6 +223,8 @@ library SciUsbMono
 		[default, source]		dispinterface		_SciUsbMono;
 								interface			_clsIMono;
 		[source]				dispinterface		__clsIMono;
+								dispinterface		ISciMono;
+		[source]				dispinterface		_SciMono;
 	}
 	[
 		uuid(1A37A108-2DFB-4603-93B0-36CBF62C3304),

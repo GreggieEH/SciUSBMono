@@ -49,6 +49,12 @@ public:
 	// get the name for this control - given by the client
 	HRESULT						GetName(
 									LPTSTR			*	pszName);
+	// _SciMono sink events
+	void						FirePropChanged(LPCTSTR PropName);
+//	void						FireError(LPCTSTR Error);
+//	void						FireBusyStatusChange(BOOL amBusy);
+	void						FireMonochromatorPropChanged(LPCTSTR propName);
+	void						FireGratingPropChanged(long gratingID, LPCTSTR propName);
 protected:
 	HRESULT						GetClassInfo(
 									ITypeInfo	**	ppTI);
@@ -56,6 +62,7 @@ protected:
 									LPCTSTR			szInterface,
 									ITypeInfo	**	ppTypeInfo);
 	HRESULT						Init__clsIMono();
+	HRESULT						Init_SciMono();
 	// get the client site
 	HRESULT						GetClientSite(
 									IOleClientSite**	ppClientSite);
@@ -731,6 +738,85 @@ private:
 		DISPID					m_dispidScanStart;
 
 	};
+	class CImpISciMono : public IDispatch
+	{
+	public:
+		CImpISciMono(CMyObject * pBackObj, IUnknown * punkOuter);
+		~CImpISciMono();
+		// IUnknown methods
+		STDMETHODIMP			QueryInterface(
+			REFIID			riid,
+			LPVOID		*	ppv);
+		STDMETHODIMP_(ULONG)	AddRef();
+		STDMETHODIMP_(ULONG)	Release();
+		// IDispatch methods
+		STDMETHODIMP			GetTypeInfoCount(
+			PUINT			pctinfo);
+		STDMETHODIMP			GetTypeInfo(
+			UINT			iTInfo,
+			LCID			lcid,
+			ITypeInfo	**	ppTInfo);
+		STDMETHODIMP			GetIDsOfNames(
+			REFIID			riid,
+			OLECHAR		**  rgszNames,
+			UINT			cNames,
+			LCID			lcid,
+			DISPID		*	rgDispId);
+		STDMETHODIMP			Invoke(
+			DISPID			dispIdMember,
+			REFIID			riid,
+			LCID			lcid,
+			WORD			wFlags,
+			DISPPARAMS	*	pDispParams,
+			VARIANT		*	pVarResult,
+			EXCEPINFO	*	pExcepInfo,
+			PUINT			puArgErr);
+	protected:
+		HRESULT					GetCurrentWavelength(VARIANT* pVarResult);
+		HRESULT					SetCurrentWavelength(DISPPARAMS* pDispParams);
+		HRESULT					GetCurrentGrating(VARIANT* pVarResult);
+		HRESULT					SetCurrentGrating(DISPPARAMS* pDispParams);
+		HRESULT					GetAutoGrating(VARIANT* pVarResult);
+		HRESULT					SetAutoGrating(DISPPARAMS* pDispParams);
+		HRESULT					GetAmInitialized(VARIANT* pVarResult);
+		HRESULT					SetAmInitialized(DISPPARAMS* pDispParams);
+		HRESULT					GetModel(VARIANT* pVarResult);
+		HRESULT					GetSerialNumber(VARIANT* pVarResult);
+		HRESULT					GetNumGratings(VARIANT* pVarResult);
+		HRESULT					GetAmBusy(VARIANT* pVarResult);
+		HRESULT					GetMonochromatorProperties(VARIANT* pVarResult);
+		HRESULT					GetGratingProperties(VARIANT* pVarResult);
+		HRESULT					GetConfigFile(VARIANT* pVarResult);
+		HRESULT					SetConfigFile(DISPPARAMS* pDispParams);
+		HRESULT					GetDriveType(VARIANT* pVarResult);
+		HRESULT					GetMonochromatorProperty(DISPPARAMS* pDispParams, VARIANT* pVarResult);
+		HRESULT					SetMonochromatorProperty(DISPPARAMS* pDispparams);
+		HRESULT					GetGratingProperty(DISPPARAMS* pDispParams, VARIANT* pVarResult);
+		HRESULT					SetGratingProperty(DISPPARAMS* pDispParams);
+		HRESULT					IsValidPosition(DISPPARAMS* pDispparams, VARIANT* pVarResult);
+		HRESULT					GetGratingDispersion(DISPPARAMS* pDispParams, VARIANT* pVarResult);
+	private:
+		CMyObject			*	m_pMyObject;
+		IUnknown			*	m_punkOuter;
+		ITypeInfo			*	m_pTypeInfo;
+		DISPID					m_dispidCurrentWavelength;
+		DISPID					m_dispidCurrentGrating;
+		DISPID					m_dispidAutoGrating;
+		DISPID					m_dispidAmInitialized;
+		DISPID					m_dispidModel;
+		DISPID					m_dispidSerialNumber;
+		DISPID					m_dispidNumGratings;
+		DISPID					m_dispidAmBusy;
+		DISPID					m_dispidMonochromatorProperties;
+		DISPID					m_dispidGratingProperties;
+		DISPID					m_dispidConfigFile;
+		DISPID					m_dispidDriveType;
+		DISPID					m_dispidMonochromatorProperty;
+		DISPID					m_dispidGratingProperty;
+		DISPID					m_dispidIsValidPosition;
+		DISPID					m_dispidGetGratingDispersion;
+	};
+
 	// make the nested classes friends
 	friend CImpIDispatch;
 	friend CImpIProvideClassInfo2;
@@ -746,6 +832,7 @@ private:
 	friend CImpISpecifyPropertyPages;
 	friend CImpIViewObject2;
 	friend CImp_clsIMono;
+	friend CImpISciMono;
 	// data members
 	// implementation classes
 	CImpIDispatch				*	m_pImpIDispatch;
@@ -762,6 +849,7 @@ private:
 	CImpISpecifyPropertyPages	*	m_pImpISpecifyPropertyPages;
 	CImpIViewObject2			*	m_pImpIViewObject2;
 	CImp_clsIMono				*	m_pImp_clsIMono;
+	CImpISciMono				*	m_pImpISciMono;
 	// object reference count
 	ULONG							m_cRefs;
 	// outer unknown for aggregation
@@ -802,4 +890,13 @@ private:
 	DISPID							m_dispidAutoGratingPropChanged;
 	// page selected flag
 	BOOL							m_fPageSelected;
+	// ISciMono
+	IID								m_iid_ISciMono;
+	IID								m_iid__SciMono;
+	// _SciMono events
+	DISPID							m_dispidPropChanged;
+	DISPID							m_dispidError;
+	DISPID							m_dispidBusyStatusChange;
+	DISPID							m_dispidMonochromatorPropChanged;
+	DISPID							m_dispidGratingPropChanged;
 };

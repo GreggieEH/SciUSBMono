@@ -2,6 +2,8 @@
 #include "stdafx.h"
 #include <initguid.h>
 #include "MyGuids.h"
+#include <MyCatid.h>
+
 #include "NamedObjects.h"
 
 // globals
